@@ -5,9 +5,18 @@
 <body>
     <h1>Playlist Analyser for Spotify</h1>
     <br>
-    <h2>Enter your Playlist URI below</h2>
 
-    <form action="action_page.php">
-      <input type="text" name="playlist_uri" value="spotify:user:tumblerer:playlist:61whDVuh3U1qCdWieDdq9x">
-      <br>
-      <input type="submit" value="Go!">
+    {% if logged_in %}
+      <h2>Enter your Playlist URI below</h2>
+
+      <form action="/playlists">
+        <input type="text" name="playlist_uri" value="spotify:user:example:playlist:61whDVuh3U1qCdWieDdq9x">
+      </form>
+        <br>
+        <input type="submit" value="Go!">
+    {% else %}
+      <h2>Log into Spotify to access your playlists</h2>
+        <form action="/login">
+        <input type="submit" value="Login to Spotify" />
+      </form>
+    {% endif %}
