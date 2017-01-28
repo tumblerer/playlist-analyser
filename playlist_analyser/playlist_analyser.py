@@ -41,14 +41,16 @@ def get_playlist_info():
     # print(json.dumps(playlist,indent=4))
     print(playlist["href"])
 
-    while playlist:
-        for tracks in playlist["items"]:
-            print(tracks["track"]["album"]["name"])
-        if playlist['next']:
-            playlist = spotify.next(playlist)
-        else:
-            playlist = None
-    return playlist_id
+    albums = []
+#    while playlist:
+    for tracks in playlist["items"]:
+        print(tracks["track"]["album"]["name"])
+        albums.append(tracks["track"]["album"]["name"])
+#        if playlist['next']:
+#            playlist = spotify.next(playlist)
+#        else:
+#            playlist = None
+    return render_template('playlist.html', albums=albums)
 
 
 def get_oauth():
@@ -76,20 +78,3 @@ def get_spotify(auth_token=None):
     if not token_info and auth_token:
         token_info = oauth.get_access_token(auth_token)
     return spotipy.Spotify(token_info["access_token"])
-
-
-# @app.route('/')
-# def home():
-#     client_credentials_manager = SpotifyClientCredentials()
-#     sp = spotipy.Spotify(client_credentials_manager=client_credentials_manager)
-#
-#     playlists = sp.user_playlist('tumblerer','37i9dQZF1CyS7pa9xmes9h')
-#     while playlists:
-#         for i, playlist in enumerate(playlists['items']):
-#             print("%4d %s %s" % (i + 1 + playlists['offset'], playlist['uri'],  playlist['name']))
-#         if playlists['next']:
-#             playlists = sp.next(playlists)
-#         else:
-#             playlists = None
-#
-#     return (al_list)
