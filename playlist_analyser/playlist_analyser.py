@@ -2,6 +2,10 @@ from flask import Flask, redirect, render_template, request
 import spotipy
 from spotipy.oauth2 import SpotifyClientCredentials
 import json
+import pygal
+from urllib.request import urlopen
+from collections import Counter, OrderedDict
+from datetime import datetime
 
 app = Flask(__name__)
 
@@ -87,7 +91,9 @@ def get_playlist_info():
 
     test_data = [test_data1, test_data2]
 
-    return render_template('playlist.html', data=data)
+    dates_chart = generate_dates_chart(dates)
+
+    return render_template('playlist.html', data=data, dates_chart=dates_chart)
 
 def get_dates_from_album(albums):
 
@@ -97,7 +103,7 @@ def get_dates_from_album(albums):
     for entry in albums:
         ids = entry[1]
         date = spotify.album(ids)["release_date"][:4]
-        dates.append(date)
+        dates.append(int(date))
 
     return dates
 
@@ -105,6 +111,38 @@ def get_genre_from_artist(artists):
 
 
     return genre
+
+def generate_dates_chart(dates):
+
+    min_date = min(dates)
+    if min_date > 1950:
+        min_date = 1950
+    max_date = datetime.now().year
+
+    date_count = Counter(dates)
+
+    for i in range(min_date,max_date):
+        if not date_count[i]:
+            date_count[i] = 0
+
+    date_count_sorted = OrderedDict(sorted(date_count.items()))
+
+    date, date_count = zip(*date_count_sorted.items())
+    # create a bar chart
+    title = 'Songs Per Year'
+    bar_chart = pygal.Bar(width=1200, height=600,
+                          x_labels_major_every=3, show_minor_x_labels=False,
+                          explicit_size=True, title=title, x_label_rotation=20)
+    #bar_chart = pygal.StackedLine(width=1200, height=600,
+    #                      explicit_size=True, title=title, fill=True)
+
+    bar_chart.x_labels = date
+    bar_chart.add('Songs Per Year', date_count)
+
+    # bar_chart.render_to_file('bar_chart.svg')
+    # bar_chart = bar_chart.render_data_uri()
+
+    return bar_chart
 
 def dump_data(json_data):
 

@@ -1,11 +1,13 @@
 <html lang="en">
 <head>
     <title>Playlist Analyser for Spotify</title>
+    <script type="text/javascript" src="http://kozea.github.com/pygal.js/javascripts/svg.jquery.js"></script>
+    <script type="text/javascript" src="http://kozea.github.io/pygal.js/latest/pygal-tooltips.js"></script>
 </head>
 <body>
     <h1>Playlist Analyser for Spotify</h1>
     <h2>Processed Data</h2>
-
+      {{ dates_chart.render()|safe }}
     <h2>Raw Data</h2>
     <h3>Tracks</h3>
     {% for item in data %}
