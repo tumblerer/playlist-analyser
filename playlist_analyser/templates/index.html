@@ -9,11 +9,11 @@
     {% if logged_in %}
       <h2>Enter your Playlist URI below</h2>
 
-      <form action="/playlists">
-        <input type="text" name="playlist_uri" value="spotify:user:example:playlist:61whDVuh3U1qCdWieDdq9x">
-      </form>
+      <form action="/playlists" method="post">
+        <input type="text" name="playlist_uri" value="spotify:user:example:playlist:61whDVuh3U1qCdWieDdq9x" style="width: 600px;">
         <br>
         <input type="submit" value="Go!">
+      </form>
     {% else %}
       <h2>Log into Spotify to access your playlists</h2>
         <form action="/login">
