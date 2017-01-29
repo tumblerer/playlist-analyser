@@ -8,49 +8,119 @@ app = Flask(__name__)
 # Flask Parameters
 CLIENT_SIDE_URL = "http://192.168.1.25"
 PORT = 5000
-REDIRECT_URI = "{}:{}/playlists".format(CLIENT_SIDE_URL, PORT)
-SCOPE = ("playlist-modify-public playlist-modify-private "
-         "playlist-read-collaborative playlist-read-private")
+REDIRECT_URI = "{}:{}/".format(CLIENT_SIDE_URL, PORT)
+SCOPE = ("playlist-read-collaborative playlist-read-private")
 
 #app.config.from_envar('PLAYLIST_ANALYSER', silent=True)
 
 @app.route("/")
 def index():
     """Redirect user to Spotify login/auth."""
-    # TODO: Probably should add a Login page?
+
+    oauth = get_oauth()
+    token_info = oauth.get_cached_token()
+    if request.args.get("code"):
+        get_spotify(request.args["code"])
+    if not token_info:
+        logged_in = False
+    else:
+        logged_in = True
+
+    print('Logged IN ' + str(logged_in))
+    return render_template('index.html', logged_in=logged_in)
+
+
+@app.route("/login")
+def login():
+
     sp_oauth = get_oauth()
     return redirect(sp_oauth.get_authorize_url())
 
-@app.route("/playlists")
+
+@app.route("/playlists", methods=['POST'])
 def get_playlist_info():
 
     spotify = get_spotify()
     if request.args.get("code"):
         get_spotify(request.args["code"])
 
-    total_playlists = spotify.current_user_playlists()
-
-    playlist_id = total_playlists["items"][6]["id"]
-
-    print(total_playlists["items"][6]["name"])
+    playlist_id = request.form["playlist_uri"][-22:]
+    print(playlist_id)
+    # print(total_playlists["items"][6]["name"])
 
     user_id = spotify.current_user()["id"]
 
     playlist = spotify.user_playlist(user_id, playlist_id)["tracks"]
 
-    # print(json.dumps(playlist,indent=4))
-    print(playlist["href"])
+    dump_data(playlist)
 
+    # Format (name, ID)
+    tracks = []
     albums = []
+    artists = []
+    dates = []
+    genre = []
+    countries = []
+
 #    while playlist:
-    for tracks in playlist["items"]:
-        print(tracks["track"]["album"]["name"])
-        albums.append(tracks["track"]["album"]["name"])
-#        if playlist['next']:
-#            playlist = spotify.next(playlist)
-#        else:
-#            playlist = None
-    return render_template('playlist.html', albums=albums)
+    for items in playlist["items"]:
+        # print(items["track"]["name"])
+        track_info = [items["track"]["name"], items["track"]["id"]]
+        tracks.append(track_info)
+        album_info = [items["track"]["album"]["name"], items["track"]["album"]["id"]]
+        albums.append(album_info)
+        artist_info =  [items["track"]["artists"][0]["name"], items["track"]["artists"][0]["id"]]
+        artists.append(artist_info)
+        genre.append("genre_info")
+
+    dates = get_dates_from_album(albums)
+
+    data = []
+    for track, album, artist, date, genre in zip(tracks, albums, artists, dates, genre):
+        meta_object = track_metadata(track, album, artist, date, genre)
+        data.append(meta_object)
+
+    test_a = ["a1","a2"]
+    test_b = ["b1","b2"]
+    test_data1 = track_metadata(test_a, "b", "c", "d", "e")
+    test_data2 = track_metadata(test_b, "b", "c", "d", "e")
+
+    test_data = [test_data1, test_data2]
+
+    return render_template('playlist.html', data=data)
+
+def get_dates_from_album(albums):
+
+    spotify = get_spotify()
+
+    dates = []
+    for entry in albums:
+        ids = entry[1]
+        date = spotify.album(ids)["release_date"][:4]
+        dates.append(date)
+
+    return dates
+
+def get_genre_from_artist(artists):
+
+
+    return genre
+
+def dump_data(json_data):
+
+    f = open('example.json', 'w')
+    f.write(json.dumps(json_data,indent=3))
+    f.close()
+    return
+
+class track_metadata:
+    """Object that contains all the meta data for a particular track"""
+    def __init__(self, track, album, artist, date, genre):
+        self.track = track
+        self.artist = artist
+        self.album = album
+        self.date = date
+        self.genre = genre
 
 
 def get_oauth():
