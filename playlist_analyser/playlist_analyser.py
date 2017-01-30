@@ -12,7 +12,8 @@ app = Flask(__name__)
 # Flask Parameters
 CLIENT_SIDE_URL = "http://192.168.1.25"
 PORT = 5000
-REDIRECT_URI = "{}:{}/".format(CLIENT_SIDE_URL, PORT)
+# REDIRECT_URI = "{}:{}/".format(CLIENT_SIDE_URL, PORT)
+REDIRECT_URI = "http://51.9.70.148/"
 SCOPE = ("playlist-read-collaborative playlist-read-private")
 
 #app.config.from_envar('PLAYLIST_ANALYSER', silent=True)
