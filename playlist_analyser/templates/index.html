@@ -1,19 +1,40 @@
 <html lang="en">
 <head>
     <title>Playlist Analyser for Spotify</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.1.1/jquery.min.js"></script>
+    <script type="text/javascript">// <![CDATA[
+      $(document).ready(function() {
+        $( "#trigger").click(function(){
+          $("#loading").show();
+          $("#content").hide();
+        });
+      // function loading(){
+      //     $("#loading").show();
+      //     $("#content").hide();
+      // }
+          });
+// ]]></script>
+
 </head>
 <body>
     <h1>Playlist Analyser for Spotify</h1>
     <br>
 
     {% if logged_in %}
+    <div id="loading"></div>
+    <div id="content">
       <h2>Enter your Spotify URI or Playlist Link below</h2>
 
       <form action="/playlists" method="post">
         <input type="text" name="playlist_uri" value="https://open.spotify.com/user/spotify/playlist/6U7cKUjDJsdLPd5AoDTjvS"style="width: 600px;">
         <br>
-        <input type="submit" value="Go!">
+        <div id=trigger>
+          <input type="submit" value="Go! ">
+        </div>
       </form>
+    </div>
+    </script>
 
     {% else %}
       <h2>Log into Spotify to access your playlists</h2>
@@ -21,3 +42,6 @@
         <input type="submit" value="Login to Spotify" />
       </form>
     {% endif %}
+
+
+</body>
