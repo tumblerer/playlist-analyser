@@ -7,13 +7,14 @@ from urllib.request import urlopen
 from collections import Counter, OrderedDict
 from datetime import datetime
 import sys
+import time
 
 app = Flask(__name__)
 
 # Flask Parameters
 CLIENT_SIDE_URL = "http://192.168.1.25"
 PORT = 5000
-if len(sys.argv) == 2:
+if len(sys.argv) > 1:
     REDIRECT_URI = "{}:{}/".format(CLIENT_SIDE_URL, PORT)
 else:
     REDIRECT_URI = "http://51.9.70.148/"
@@ -25,15 +26,20 @@ SCOPE = ("playlist-read-collaborative playlist-read-private")
 def index():
     """Redirect user to Spotify login/auth."""
 
-    # Check response
+    # Check response on login
+    sp_oauth = get_oauth()
     if request.args.get("code"):
-        sp_oauth = get_oauth()
         code = request.args.get("code")
         token_info = sp_oauth.get_access_token(code)
         session['token'] = token_info
 
     if 'token' in session:
         logged_in = True
+
+        # Check whether token needs a refresh
+        token_info = session.get('token')
+        if is_token_expired(token_info):
+            session['token'] = sp_oauth.refresh_access_token(token_info["refresh_token"])
     else:
         logged_in = False
 
@@ -51,13 +57,19 @@ def login():
 def get_playlist_info():
 
     spotify = get_spotify()
-    
+
     playlist_uri = request.form["playlist_uri"]
-    split_uri = playlist_uri.split(":")
-    username = split_uri[2]
-    playlist_id = split_uri[4]
-    print(playlist_id)
-    # print(total_playlists["items"][6]["name"])
+    if playlist_uri[0:4] == 'http':
+        # https://open.spotify.com/user/spotify/playlist/37i9dQZF1CyS7pa9xmes9h
+        split_uri = playlist_uri.split('/')
+        # print('Split 0')
+        # print(split_uri)
+    else:
+        # spotify:user:spotify:playlist:37i9dQZF1CyS7pa9xmes9h
+        split_uri = playlist_uri.split(":")
+
+    username = split_uri[-3]
+    playlist_id = split_uri[-1]
 
     user_id = spotify.current_user()["id"]
 
@@ -195,8 +207,10 @@ def get_spotify(auth_token=None):
     if not token_info and auth_token:
         token_info = oauth.get_access_token(auth_token)
 
-    print(token_info)
-
     return spotipy.Spotify(token_info['access_token'])
+
+def is_token_expired(token_info):
+    now = int(time.time())
+    return token_info['expires_at'] - now < 60
 
 app.secret_key = get_prefs()["CookieKey"]
