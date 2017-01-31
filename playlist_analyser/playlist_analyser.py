@@ -62,8 +62,6 @@ def get_playlist_info():
     if playlist_uri[0:4] == 'http':
         # https://open.spotify.com/user/spotify/playlist/37i9dQZF1CyS7pa9xmes9h
         split_uri = playlist_uri.split('/')
-        # print('Split 0')
-        # print(split_uri)
     else:
         # spotify:user:spotify:playlist:37i9dQZF1CyS7pa9xmes9h
         split_uri = playlist_uri.split(":")
@@ -71,8 +69,7 @@ def get_playlist_info():
     username = split_uri[-3]
     playlist_id = split_uri[-1]
 
-    user_id = spotify.current_user()["id"]
-
+    user_id = username
     playlist = spotify.user_playlist(user_id, playlist_id)["tracks"]
 
     dump_data(playlist)

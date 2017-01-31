@@ -7,15 +7,14 @@
     <br>
 
     {% if logged_in %}
-      <h2>Enter your Playlist URI below</h2>
+      <h2>Enter your Spotify URI or Playlist Link below</h2>
 
       <form action="/playlists" method="post">
-        <input type="text" name="playlist_uri" value="spotify:user:example:playlist:61whDVuh3U1qCdWieDdq9x" style="width: 600px;">
+        <input type="text" name="playlist_uri" value="https://open.spotify.com/user/spotify/playlist/6U7cKUjDJsdLPd5AoDTjvS"style="width: 600px;">
         <br>
         <input type="submit" value="Go!">
       </form>
 
-      <h3> Note, the playlist must have been created by you</h3>
     {% else %}
       <h2>Log into Spotify to access your playlists</h2>
         <form action="/login">
