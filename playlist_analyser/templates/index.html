@@ -5,15 +5,14 @@
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.1.1/jquery.min.js"></script>
     <script type="text/javascript">// <![CDATA[
       $(document).ready(function() {
+
         $( "#trigger").click(function(){
           $("#loading").show();
+          $("#loading-text").show();
           $("#content").hide();
         });
-      // function loading(){
-      //     $("#loading").show();
-      //     $("#content").hide();
-      // }
-          });
+
+      });
 // ]]></script>
 
 </head>
@@ -23,6 +22,10 @@
 
     {% if logged_in %}
     <div id="loading"></div>
+    <div id="loading-text">
+      <h3>Analysing playlist ...</h3>
+      <h3>This may take a few minutes...</h3>
+    </div>
     <div id="content">
       <h2>Enter your Spotify URI or Playlist Link below</h2>
 
