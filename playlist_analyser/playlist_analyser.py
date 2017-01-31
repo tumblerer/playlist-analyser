@@ -1,4 +1,4 @@
-from flask import Flask, redirect, render_template, request
+from flask import Flask, redirect, render_template, request, session
 import spotipy
 from spotipy.oauth2 import SpotifyClientCredentials
 import json
@@ -6,14 +6,17 @@ import pygal
 from urllib.request import urlopen
 from collections import Counter, OrderedDict
 from datetime import datetime
+import sys
 
 app = Flask(__name__)
 
 # Flask Parameters
 CLIENT_SIDE_URL = "http://192.168.1.25"
 PORT = 5000
-# REDIRECT_URI = "{}:{}/".format(CLIENT_SIDE_URL, PORT)
-REDIRECT_URI = "http://51.9.70.148/"
+if len(sys.argv) == 2:
+    REDIRECT_URI = "{}:{}/".format(CLIENT_SIDE_URL, PORT)
+else:
+    REDIRECT_URI = "http://51.9.70.148/"
 SCOPE = ("playlist-read-collaborative playlist-read-private")
 
 #app.config.from_envar('PLAYLIST_ANALYSER', silent=True)
@@ -22,16 +25,18 @@ SCOPE = ("playlist-read-collaborative playlist-read-private")
 def index():
     """Redirect user to Spotify login/auth."""
 
-    oauth = get_oauth()
-    token_info = oauth.get_cached_token()
+    # Check response
     if request.args.get("code"):
-        get_spotify(request.args["code"])
-    if not token_info:
-        logged_in = False
-    else:
-        logged_in = True
+        sp_oauth = get_oauth()
+        code = request.args.get("code")
+        token_info = sp_oauth.get_access_token(code)
+        session['token'] = token_info
 
-    print('Logged IN ' + str(logged_in))
+    if 'token' in session:
+        logged_in = True
+    else:
+        logged_in = False
+
     return render_template('index.html', logged_in=logged_in)
 
 
@@ -46,10 +51,11 @@ def login():
 def get_playlist_info():
 
     spotify = get_spotify()
-    if request.args.get("code"):
-        get_spotify(request.args["code"])
-
-    playlist_id = request.form["playlist_uri"][-22:]
+    
+    playlist_uri = request.form["playlist_uri"]
+    split_uri = playlist_uri.split(":")
+    username = split_uri[2]
+    playlist_id = split_uri[4]
     print(playlist_id)
     # print(total_playlists["items"][6]["name"])
 
@@ -166,8 +172,7 @@ def get_oauth():
     """Return a Spotipy Oauth2 object."""
     prefs = get_prefs()
     return spotipy.oauth2.SpotifyOAuth(
-        prefs["ClientID"], prefs["ClientSecret"], REDIRECT_URI, scope=SCOPE,
-        cache_path=".tokens")
+        prefs["ClientID"], prefs["ClientSecret"], REDIRECT_URI, scope=SCOPE)
 
 def get_prefs():
     """Get application prefs plist and set secret key.
@@ -176,14 +181,22 @@ def get_prefs():
     """
     with open("config.json") as prefs_file:
         prefs = json.load(prefs_file)
-    app.secret_key = prefs["SecretKey"]
+    app.secret_key = prefs["CookieKey"]
 
     return prefs
 
 def get_spotify(auth_token=None):
     """Return an authenticated Spotify object."""
     oauth = get_oauth()
-    token_info = oauth.get_cached_token()
+    # token_info = oauth.get_cached_token()
+    token_info = False
+    if 'token' in session:
+        token_info = session.get('token')
     if not token_info and auth_token:
         token_info = oauth.get_access_token(auth_token)
-    return spotipy.Spotify(token_info["access_token"])
+
+    print(token_info)
+
+    return spotipy.Spotify(token_info['access_token'])
+
+app.secret_key = get_prefs()["CookieKey"]
