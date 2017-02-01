@@ -70,9 +70,13 @@ def get_playlist_info():
     playlist_id = split_uri[-1]
 
     user_id = username
-    playlist = spotify.user_playlist_tracks(user_id, playlist_id)["items"]
 
-    dump_data(playlist)
+    # Check length of playlist
+
+    playlist_length = spotify.user_playlist_tracks(user_id, playlist_id,fields='total')
+    playlist_length =playlist_length['total']
+
+    # dump_data(playlist)
 
     # Format (name, ID)
     tracks = []
@@ -82,18 +86,30 @@ def get_playlist_info():
     genre = []
     countries = []
 
-#    while playlist:
-    for items in playlist:
-        # print(items["track"]["name"])
-        track_info = [items["track"]["name"], items["track"]["id"]]
-        tracks.append(track_info)
-        album_info = [items["track"]["album"]["name"], items["track"]["album"]["id"]]
-        albums.append(album_info)
-        artist_info =  [items["track"]["artists"][0]["name"], items["track"]["artists"][0]["id"]]
-        artists.append(artist_info)
-        genre.append("genre_info")
+    playlist_remaining = playlist_length
+    offset = 0
+    item_count = 0
 
-    dates = get_dates_from_album(albums)
+    while playlist_remaining > 0:
+        playlist = spotify.user_playlist_tracks(user_id, playlist_id,offset=offset)
+        for items in playlist["items"]:
+            # print(items["track"]["name"])
+            track_info = [items["track"]["name"], items["track"]["id"]]
+            tracks.append(track_info)
+            album_info = [items["track"]["album"]["name"], items["track"]["album"]["id"]]
+            albums.append(album_info)
+            artist_info =  [items["track"]["artists"][0]["name"], items["track"]["artists"][0]["id"]]
+            artists.append(artist_info)
+            genre.append("genre_info")
+
+        # Limit of 100 tracks in fetch
+        playlist_remaining = playlist_remaining - 100
+        offset = playlist_length - playlist_remaining
+
+        print('Remaining: ' + str(playlist_remaining))
+        print('Offset: ' + str(offset))
+
+    dates = get_dates_from_album(albums, playlist_length)
 
     data = []
     for track, album, artist, date, genre in zip(tracks, albums, artists, dates, genre):
@@ -111,15 +127,37 @@ def get_playlist_info():
 
     return render_template('playlist.html', data=data, dates_chart=dates_chart)
 
-def get_dates_from_album(albums):
+def get_dates_from_album(album_info, total):
 
     spotify = get_spotify()
 
     dates = []
-    for entry in albums:
-        ids = entry[1]
-        date = spotify.album(ids)["release_date"][:4]
-        dates.append(int(date))
+    ids = []
+
+    offset = 0
+    albums_remaining = total
+
+    while albums_remaining > 0:
+        # Build list of 20 ids
+        # Limit of 20 songs in query
+        if albums_remaining < 20:
+            albums_remaining_20 = albums_remaining
+        else:
+            albums_remaining_20 = 20
+
+        while albums_remaining_20 > 0:
+            ids.append(album_info[offset][1])
+            offset = offset + 1
+            albums_remaining_20 = albums_remaining_20 - 1
+
+        # dates = spotify.albums(ids)["release_date"][:4]
+        albums = spotify.albums(ids)["albums"]
+        albums_remaining = albums_remaining - 20
+        # ID array needs to be reset every loop
+        ids = []
+        for entry in albums:
+            date = entry["release_date"][:4]
+            dates.append(int(date))
 
     return dates
 
