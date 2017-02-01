@@ -20,6 +20,8 @@ else:
     REDIRECT_URI = "http://51.9.70.148/"
 SCOPE = ("playlist-read-collaborative playlist-read-private")
 
+# Control how many playlists can be analysed at a time
+PLAYLIST_NUMBER = 2
 #app.config.from_envar('PLAYLIST_ANALYSER', silent=True)
 
 @app.route("/")
@@ -43,7 +45,8 @@ def index():
     else:
         logged_in = False
 
-    return render_template('index.html', logged_in=logged_in)
+    return render_template('index.html', logged_in=logged_in,
+                            playlist_number=PLAYLIST_NUMBER)
 
 
 @app.route("/login")
@@ -57,68 +60,88 @@ def login():
 def get_playlist_info():
 
     spotify = get_spotify()
+    valid_playlsts = 0
+    all_playlists_data = {}
+    all_playlists_dates = {}
 
-    playlist_uri = request.form["playlist_uri"]
-    if playlist_uri[0:4] == 'http':
-        # https://open.spotify.com/user/spotify/playlist/37i9dQZF1CyS7pa9xmes9h
-        split_uri = playlist_uri.split('/')
-    else:
-        # spotify:user:spotify:playlist:37i9dQZF1CyS7pa9xmes9h
-        split_uri = playlist_uri.split(":")
+    for playlist_count in range(0,PLAYLIST_NUMBER):
+        playlist_form = 'playlist_uri' + str(playlist_count)
+        print(playlist_form)
+        # If playlist form is empty, quit loop
+        # TODO: validate text entry properly
+        if request.form[playlist_form] == '':
+            break
+        else:
+            valid_playlsts = valid_playlsts + 1
 
-    username = split_uri[-3]
-    playlist_id = split_uri[-1]
+        print("check")
+        playlist_uri = request.form[playlist_form]
 
-    user_id = username
+        if playlist_uri[0:4] == 'http':
+            # https://open.spotify.com/user/spotify/playlist/37i9dQZF1CyS7pa9xmes9h
+            split_uri = playlist_uri.split('/')
+        else:
+            # spotify:user:spotify:playlist:37i9dQZF1CyS7pa9xmes9h
+            split_uri = playlist_uri.split(":")
 
-    # Check length of playlist
+        username = split_uri[-3]
+        playlist_id = split_uri[-1]
 
-    playlist_length = spotify.user_playlist_tracks(user_id, playlist_id,fields='total')
-    playlist_length = playlist_length['total']
+        user_id = username
 
-    # dump_data(playlist)
+        # Check length of playlist
 
-    # Format (name, ID)
-    tracks = []
-    albums = []
-    artists = []
-    dates = []
-    genre = []
-    countries = []
+        playlist_length = spotify.user_playlist_tracks(user_id, playlist_id,fields='total')
+        playlist_length = playlist_length['total']
 
-    playlist_remaining = playlist_length
-    offset = 0
-    item_count = 0
+        # dump_data(playlist)
 
-    while playlist_remaining > 0:
-        playlist = spotify.user_playlist_tracks(user_id, playlist_id,offset=offset)
-        for items in playlist["items"]:
-            # print(items["track"]["name"])
-            track_info = [items["track"]["name"], items["track"]["id"]]
-            tracks.append(track_info)
-            album_info = [items["track"]["album"]["name"], items["track"]["album"]["id"]]
-            albums.append(album_info)
-            artist_info =  [items["track"]["artists"][0]["name"], items["track"]["artists"][0]["id"]]
-            artists.append(artist_info)
-            genre.append("genre_info")
+        # Format (name, ID)
+        tracks = []
+        albums = []
+        artists = []
+        dates = []
+        genre = []
+        countries = []
 
-        # Limit of 100 tracks in fetch
-        playlist_remaining = playlist_remaining - 100
-        offset = playlist_length - playlist_remaining
+        playlist_remaining = playlist_length
+        offset = 0
+        item_count = 0
 
-        print('Remaining: ' + str(playlist_remaining))
-        print('Offset: ' + str(offset))
+        while playlist_remaining > 0:
+            playlist = spotify.user_playlist_tracks(user_id, playlist_id,offset=offset)
+            for items in playlist["items"]:
+                # print(items["track"]["name"])
+                track_info = [items["track"]["name"], items["track"]["id"]]
+                tracks.append(track_info)
+                album_info = [items["track"]["album"]["name"], items["track"]["album"]["id"]]
+                albums.append(album_info)
+                artist_info =  [items["track"]["artists"][0]["name"], items["track"]["artists"][0]["id"]]
+                artists.append(artist_info)
+                genre.append("genre_info")
 
-    dates = get_dates_from_album(albums, playlist_length)
+            # Limit of 100 tracks in fetch
+            playlist_remaining = playlist_remaining - 100
+            offset = playlist_length - playlist_remaining
 
-    data = []
-    for track, album, artist, date, genre in zip(tracks, albums, artists, dates, genre):
-        meta_object = track_metadata(track, album, artist, date, genre)
-        data.append(meta_object)
+            print('Remaining: ' + str(playlist_remaining))
+            print('Offset: ' + str(offset))
 
-    dates_chart = generate_dates_chart(dates)
+        dates = get_dates_from_album(albums, playlist_length)
+        all_playlists_dates[playlist_count] = dates
 
-    return render_template('playlist.html', data=data, dates_chart=dates_chart)
+        playlist_data = []
+
+        for track, album, artist, date, genre in zip(tracks, albums, artists, dates, genre):
+            meta_object = track_metadata(track, album, artist, date, genre)
+            playlist_data.append(meta_object)
+
+        all_playlists_data[playlist_count] = playlist_data
+
+    dates_chart = generate_dates_chart(all_playlists_dates)
+
+
+    return render_template('playlist.html', data=playlist_data, dates_chart=dates_chart)
 
 def get_dates_from_album(album_info, total):
 
@@ -159,15 +182,24 @@ def get_genre_from_artist(artists):
 
     return genre
 
-def generate_dates_chart(dates):
+def generate_dates_chart(total_dates):
+
+    # List of dates for min, max
+    # TODO: Undoubtedly a better way to this than creating another list
+    dates = []
+    for playlist, date in total_dates:
+        dates.append(date)
 
     min_date = min(dates)
     if min_date > 1950:
         min_date = 1950
     max_date = datetime.now().year
 
+    #  TODO: Move into forloop 
+    # Should be placed in a for
     date_count = Counter(dates)
 
+    print(date_count)
     for i in range(min_date,max_date):
         if not date_count[i]:
             date_count[i] = 0

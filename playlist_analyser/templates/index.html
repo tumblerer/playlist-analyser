@@ -28,10 +28,11 @@
     </div>
     <div id="content">
       <h2>Enter your Spotify URI or Playlist Link below</h2>
-
       <form action="/playlists" method="post">
-        <input type="text" name="playlist_uri" value="https://open.spotify.com/user/spotify/playlist/6U7cKUjDJsdLPd5AoDTjvS"style="width: 600px;">
+      {% for i in range(0,playlist_number) %}
+        <input type="text" name="{{ 'playlist_uri' + i|string }}" value="" style="width: 600px;">
         <br>
+      {% endfor %}
         <div id=trigger>
           <input type="submit" value="Go! ">
         </div>
