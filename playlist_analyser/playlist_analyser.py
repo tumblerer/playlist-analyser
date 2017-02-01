@@ -74,7 +74,7 @@ def get_playlist_info():
     # Check length of playlist
 
     playlist_length = spotify.user_playlist_tracks(user_id, playlist_id,fields='total')
-    playlist_length =playlist_length['total']
+    playlist_length = playlist_length['total']
 
     # dump_data(playlist)
 
@@ -115,13 +115,6 @@ def get_playlist_info():
     for track, album, artist, date, genre in zip(tracks, albums, artists, dates, genre):
         meta_object = track_metadata(track, album, artist, date, genre)
         data.append(meta_object)
-
-    test_a = ["a1","a2"]
-    test_b = ["b1","b2"]
-    test_data1 = track_metadata(test_a, "b", "c", "d", "e")
-    test_data2 = track_metadata(test_b, "b", "c", "d", "e")
-
-    test_data = [test_data1, test_data2]
 
     dates_chart = generate_dates_chart(dates)
 
