@@ -70,7 +70,7 @@ def get_playlist_info():
     playlist_id = split_uri[-1]
 
     user_id = username
-    playlist = spotify.user_playlist(user_id, playlist_id)["tracks"]
+    playlist = spotify.user_playlist_tracks(user_id, playlist_id)["items"]
 
     dump_data(playlist)
 
@@ -83,7 +83,7 @@ def get_playlist_info():
     countries = []
 
 #    while playlist:
-    for items in playlist["items"]:
+    for items in playlist:
         # print(items["track"]["name"])
         track_info = [items["track"]["name"], items["track"]["id"]]
         tracks.append(track_info)
