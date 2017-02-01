@@ -246,6 +246,6 @@ def get_spotify(auth_token=None):
 
 def is_token_expired(token_info):
     now = int(time.time())
-    return token_info['expires_at'] - now < 60
+    return token_info['expires_at'] - now < 180
 
 app.secret_key = get_prefs()["CookieKey"]
