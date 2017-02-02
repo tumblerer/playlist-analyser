@@ -17,7 +17,7 @@ PORT = 5000
 if len(sys.argv) > 1:
     REDIRECT_URI = "{}:{}/".format(CLIENT_SIDE_URL, PORT)
 else:
-    REDIRECT_URI = "http://51.9.70.148/"
+    REDIRECT_URI = "http://146.198.217.109/"
 SCOPE = ("playlist-read-collaborative playlist-read-private")
 
 # Control how many playlists can be analysed at a time
@@ -125,9 +125,6 @@ def get_playlist_info():
             playlist_remaining = playlist_remaining - 100
             offset = playlist_length - playlist_remaining
 
-            print('Remaining: ' + str(playlist_remaining))
-            print('Offset: ' + str(offset))
-
         dates = get_dates_from_album(albums, playlist_length)
         all_playlists_dates[playlist_name] = dates
 
@@ -139,7 +136,7 @@ def get_playlist_info():
 
         all_playlists_data[playlist_id] = playlist_data
 
-    print(all_playlists_dates)
+    # print(all_playlists_dates)
     dates_chart = generate_dates_chart(all_playlists_dates)
 
 
@@ -187,17 +184,9 @@ def get_genre_from_artist(artists):
 def generate_dates_chart(total_dates):
 
     # Create list of dates
-    # zip requires multiple keys
-    if len(total_dates) > 1:
-        playlist_names, dates = zip(*total_dates)
-        dates = [item for sublist in dates for item in sublist]
-    else:
-        playlist_names = next(iter(total_dates))
-        dates = total_dates[playlist_names]
-        # Convert to list for loop.  Can't use list as key ^
-        playlist_names = [playlist_names]
+    playlist_names, dates = zip(*total_dates.items())
 
-    min_date = min(dates)
+    min_date = min(dates[0])
     if min_date > 1950:
         min_date = 1950
     max_date = datetime.now().year
@@ -212,13 +201,9 @@ def generate_dates_chart(total_dates):
 
     for playlists in playlist_names:
 
-        print('playlists')
-        print(playlists)
         dates = total_dates[playlists]
-
         date_count = Counter(dates)
 
-        print(date_count)
         for i in range(min_date,max_date):
             if not date_count[i]:
                 date_count[i] = 0
@@ -233,7 +218,7 @@ def generate_dates_chart(total_dates):
 
     #bar_chart = pygal.StackedLine(width=1200, height=600,
     #                      explicit_size=True, title=title, fill=True)
-    bar_chart.render_to_file('bar_chart.svg')
+    # bar_chart.render_to_file('bar_chart.svg')
     # bar_chart = bar_chart.render_data_uri()
 
     return bar_chart
