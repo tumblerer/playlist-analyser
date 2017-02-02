@@ -10,7 +10,7 @@
       {{ dates_chart.render()|safe }}
     <h2>Raw Data</h2>
     <h3>Tracks</h3>
-    {% for key in data %}
+    {# {% for key in data %}
       <h3> {{ "Playlist" + key|string}}</h3>
       {% for item in key %}
         <br>{{item.track[0]}}
@@ -29,7 +29,7 @@
         <br>{{item.date}}
       {% endfor %}
     {% endfor %}
-    <br>
+    <br>  #}
     ------------
 </body>
 </html>

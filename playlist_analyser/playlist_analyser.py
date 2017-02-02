@@ -91,8 +91,9 @@ def get_playlist_info():
 
         # Check length of playlist
 
-        playlist_length = spotify.user_playlist_tracks(user_id, playlist_id,fields='total')
-        playlist_length = playlist_length['total']
+        playlist_fetch = spotify.user_playlist(user_id, playlist_id,fields='tracks.total, name')
+        playlist_length = playlist_fetch['tracks']['total']
+        playlist_name = playlist_fetch['name']
 
         # dump_data(playlist)
 
@@ -128,20 +129,21 @@ def get_playlist_info():
             print('Offset: ' + str(offset))
 
         dates = get_dates_from_album(albums, playlist_length)
-        all_playlists_dates[playlist_count] = dates
+        all_playlists_dates[playlist_name] = dates
 
-        playlist_data = []
+        playlist_data = [playlist_id]
 
         for track, album, artist, date, genre in zip(tracks, albums, artists, dates, genre):
             meta_object = track_metadata(track, album, artist, date, genre)
             playlist_data.append(meta_object)
 
-        all_playlists_data[playlist_count] = playlist_data
+        all_playlists_data[playlist_id] = playlist_data
 
+    print(all_playlists_dates)
     dates_chart = generate_dates_chart(all_playlists_dates)
 
 
-    return render_template('playlist.html', data=playlist_data, dates_chart=dates_chart)
+    return render_template('playlist.html', data=all_playlists_data, dates_chart=dates_chart)
 
 def get_dates_from_album(album_info, total):
 
@@ -184,41 +186,54 @@ def get_genre_from_artist(artists):
 
 def generate_dates_chart(total_dates):
 
-    # List of dates for min, max
-    # TODO: Undoubtedly a better way to this than creating another list
-    dates = []
-    for playlist, date in total_dates:
-        dates.append(date)
+    # Create list of dates
+    # zip requires multiple keys
+    if len(total_dates) > 1:
+        playlist_names, dates = zip(*total_dates)
+        dates = [item for sublist in dates for item in sublist]
+    else:
+        playlist_names = next(iter(total_dates))
+        dates = total_dates[playlist_names]
+        # Convert to list for loop.  Can't use list as key ^
+        playlist_names = [playlist_names]
 
     min_date = min(dates)
     if min_date > 1950:
         min_date = 1950
     max_date = datetime.now().year
 
-    #  TODO: Move into forloop 
-    # Should be placed in a for
-    date_count = Counter(dates)
-
-    print(date_count)
-    for i in range(min_date,max_date):
-        if not date_count[i]:
-            date_count[i] = 0
-
-    date_count_sorted = OrderedDict(sorted(date_count.items()))
-
-    date, date_count = zip(*date_count_sorted.items())
     # create a bar chart
     title = 'Songs Per Year'
     bar_chart = pygal.Bar(width=1200, height=600,
                           x_labels_major_every=3, show_minor_x_labels=False,
                           explicit_size=True, title=title, x_label_rotation=20)
+
+    playlist_count = len(total_dates)
+
+    for playlists in playlist_names:
+
+        print('playlists')
+        print(playlists)
+        dates = total_dates[playlists]
+
+        date_count = Counter(dates)
+
+        print(date_count)
+        for i in range(min_date,max_date):
+            if not date_count[i]:
+                date_count[i] = 0
+
+        date_count_sorted = OrderedDict(sorted(date_count.items()))
+
+        date, date_count = zip(*date_count_sorted.items())
+
+        playlist_name = str(playlists)
+        bar_chart.x_labels = date
+        bar_chart.add(playlist_name, date_count)
+
     #bar_chart = pygal.StackedLine(width=1200, height=600,
     #                      explicit_size=True, title=title, fill=True)
-
-    bar_chart.x_labels = date
-    bar_chart.add('Songs Per Year', date_count)
-
-    # bar_chart.render_to_file('bar_chart.svg')
+    bar_chart.render_to_file('bar_chart.svg')
     # bar_chart = bar_chart.render_data_uri()
 
     return bar_chart
