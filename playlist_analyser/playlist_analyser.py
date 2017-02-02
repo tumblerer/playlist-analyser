@@ -21,7 +21,7 @@ else:
 SCOPE = ("playlist-read-collaborative playlist-read-private")
 
 # Control how many playlists can be analysed at a time
-PLAYLIST_NUMBER = 2
+PLAYLIST_NUMBER = 3
 #app.config.from_envar('PLAYLIST_ANALYSER', silent=True)
 
 @app.route("/")
@@ -195,7 +195,8 @@ def generate_dates_chart(total_dates):
     title = 'Songs Per Year'
     bar_chart = pygal.Bar(width=1200, height=600,
                           x_labels_major_every=3, show_minor_x_labels=False,
-                          explicit_size=True, title=title, x_label_rotation=20)
+                          explicit_size=True, title=title, x_label_rotation=20,
+                          legend_at_bottom=True, truncate_legend=40)
 
     playlist_count = len(total_dates)
 
