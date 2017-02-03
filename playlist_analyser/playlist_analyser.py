@@ -56,13 +56,19 @@ def login():
     return redirect(sp_oauth.get_authorize_url())
 
 
+# TODO: Gauge for average time
+#       Radar for analytics
+
 @app.route("/playlists", methods=['POST'])
 def get_playlist_info():
 
     spotify = get_spotify()
     valid_playlsts = 0
     all_playlists_data = {}
+    all_playlists_tracks = {}
     all_playlists_dates = {}
+    all_playlists_durations = {}
+    all_playlists_explicits = {}
 
     for playlist_count in range(0,PLAYLIST_NUMBER):
         playlist_form = 'playlist_uri' + str(playlist_count)
@@ -102,7 +108,9 @@ def get_playlist_info():
         albums = []
         artists = []
         dates = []
-        genre = []
+        genres = []
+        durations = []
+        explicits = []
         countries = []
 
         playlist_remaining = playlist_length
@@ -119,19 +127,29 @@ def get_playlist_info():
                 albums.append(album_info)
                 artist_info =  [items["track"]["artists"][0]["name"], items["track"]["artists"][0]["id"]]
                 artists.append(artist_info)
-                genre.append("genre_info")
+                genres.append("genre_info")
+                duration_info = items["track"]["duration_ms"]
+                durations.append(duration_info)
+                explicit_info = items["track"]["explicit"]
+                explicits.append(explicit_info)
 
             # Limit of 100 tracks in fetch
             playlist_remaining = playlist_remaining - 100
             offset = playlist_length - playlist_remaining
 
         dates = get_dates_from_album(albums, playlist_length)
+        analytics = get_analytics_info(tracks)
+
+        all_playlists_tracks[playlist_name] = tracks
         all_playlists_dates[playlist_name] = dates
+        all_playlists_durations[playlist_name] = durations
+        all_playlists_explicits[playlist_name] = explicits
 
         playlist_data = [playlist_id]
 
-        for track, album, artist, date, genre in zip(tracks, albums, artists, dates, genre):
-            meta_object = track_metadata(track, album, artist, date, genre)
+        for track, album, artist, date, genre, duration, explicit \
+            in zip(tracks, albums, artists, dates, genres, durations, explicits):
+            meta_object = track_metadata(track, album, artist, date, genre, duration, explicit)
             playlist_data.append(meta_object)
 
         all_playlists_data[playlist_id] = playlist_data
@@ -139,8 +157,12 @@ def get_playlist_info():
     # print(all_playlists_dates)
     dates_chart = generate_dates_chart(all_playlists_dates)
 
+    duration_chart = generate_duration_chart(all_playlists_durations)
 
-    return render_template('playlist.html', data=all_playlists_data, dates_chart=dates_chart)
+
+    return render_template('playlist.html', data=all_playlists_data,
+                            dates_chart=dates_chart,
+                            duration_chart=duration_chart)
 
 def get_dates_from_album(album_info, total):
 
@@ -175,6 +197,10 @@ def get_dates_from_album(album_info, total):
             dates.append(int(date))
 
     return dates
+
+def get_analytics_info(tracks):
+        
+    return
 
 def get_genre_from_artist(artists):
 
@@ -224,6 +250,36 @@ def generate_dates_chart(total_dates):
 
     return bar_chart
 
+
+def generate_duration_chart(total_durations):
+
+    playlist_names, durations = zip(*total_durations.items())
+
+    max_duration = max(durations[0])
+    # Convert from milliseconds
+    max_duration = max_duration/(60*1000)
+
+    gauge_chart = pygal.Gauge(human_readable=True,
+                            width=700, height=700, explicit_size=True,
+                            legend_at_bottom=True, truncate_legend=40)
+    gauge_chart.title = 'Average Song Duration'
+    gauge_chart.range = [0, max_duration]
+
+    for playlists in playlist_names:
+
+        durations_ms = total_durations[playlists]
+
+        durations_mins = []
+        for times in durations_ms:
+            durations_mins.append(times/(60*1000))
+
+        average_duration = sum(durations_mins)/len(durations_mins)
+
+        gauge_chart.add(playlists, average_duration)
+
+    return gauge_chart
+
+
 def dump_data(json_data):
 
     f = open('example.json', 'w')
@@ -233,12 +289,14 @@ def dump_data(json_data):
 
 class track_metadata:
     """Object that contains all the meta data for a particular track"""
-    def __init__(self, track, album, artist, date, genre):
+    def __init__(self, track, album, artist, date, genre, duration, explicit):
         self.track = track
         self.artist = artist
         self.album = album
         self.date = date
         self.genre = genre
+        self.duration = duration
+        self.explicit = explicit
 
 
 def get_oauth():

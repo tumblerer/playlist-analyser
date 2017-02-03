@@ -8,6 +8,9 @@
     <h1>Playlist Analyser for Spotify</h1>
     <h2>Processed Data</h2>
       {{ dates_chart.render()|safe }}
+      <br>
+      {{ duration_chart.render()|safe }}
+      <br><br><br>
     <h2>Raw Data</h2>
     <h3>Tracks</h3>
     {# {% for key in data %}
