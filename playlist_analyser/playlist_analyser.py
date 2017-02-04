@@ -21,7 +21,7 @@ else:
 SCOPE = ("playlist-read-collaborative playlist-read-private")
 
 # Control how many playlists can be analysed at a time
-PLAYLIST_NUMBER = 3
+PLAYLIST_NUMBER = 5
 #app.config.from_envar('PLAYLIST_ANALYSER', silent=True)
 
 @app.route("/")
@@ -69,6 +69,7 @@ def get_playlist_info():
     all_playlists_dates = {}
     all_playlists_durations = {}
     all_playlists_explicits = {}
+    all_playlists_analytics = {}
 
     for playlist_count in range(0,PLAYLIST_NUMBER):
         playlist_form = 'playlist_uri' + str(playlist_count)
@@ -97,7 +98,8 @@ def get_playlist_info():
 
         # Check length of playlist
 
-        playlist_fetch = spotify.user_playlist(user_id, playlist_id,fields='tracks.total, name')
+        playlist_fetch = spotify.user_playlist(user_id, playlist_id,
+                                               fields='tracks.total, name')
         playlist_length = playlist_fetch['tracks']['total']
         playlist_name = playlist_fetch['name']
 
@@ -144,6 +146,7 @@ def get_playlist_info():
         all_playlists_dates[playlist_name] = dates
         all_playlists_durations[playlist_name] = durations
         all_playlists_explicits[playlist_name] = explicits
+        all_playlists_analytics[playlist_name] = analytics
 
         playlist_data = [playlist_id]
 
@@ -156,13 +159,14 @@ def get_playlist_info():
 
     # print(all_playlists_dates)
     dates_chart = generate_dates_chart(all_playlists_dates)
-
     duration_chart = generate_duration_chart(all_playlists_durations)
+    analytics_radar_chart = generate_analytics_radar_chart(all_playlists_analytics)
 
 
     return render_template('playlist.html', data=all_playlists_data,
                             dates_chart=dates_chart,
-                            duration_chart=duration_chart)
+                            duration_chart=duration_chart,
+                            analytics_radar_chart=analytics_radar_chart)
 
 def get_dates_from_album(album_info, total):
 
@@ -199,8 +203,33 @@ def get_dates_from_album(album_info, total):
     return dates
 
 def get_analytics_info(tracks):
-        
-    return
+
+    spotify = get_spotify()
+    analytics = []
+    offset = 0
+    tracks_remaining = len(tracks)
+
+    while tracks_remaining > 0:
+        track_id = []
+
+        if tracks_remaining < 100:
+            tracks_remaining_100 = tracks_remaining
+        else:
+            tracks_remaining_100 = 100
+
+        while tracks_remaining_100 > 0:
+            # Get IDs
+            track_id.append(tracks[offset][1])
+            offset += 1
+            tracks_remaining_100 -= 1
+
+        tracks_remaining -= 100
+        analytics_20 = spotify.audio_features(track_id)
+
+        analytics += analytics_20
+
+    return analytics
+
 
 def get_genre_from_artist(artists):
 
@@ -279,6 +308,52 @@ def generate_duration_chart(total_durations):
 
     return gauge_chart
 
+
+def generate_analytics_radar_chart(total_analytics):
+
+    playlist_names, analytics = zip(*total_analytics.items())
+
+    radar_chart = pygal.Radar(width=700, height=700, explicit_size=True,
+                              legend_at_bottom=True, truncate_legend=40,
+                              range=(0,1))
+    radar_chart.title = 'Average Charactistics'
+    radar_chart.x_labels = ['Danceability', 'Energy', 'Valence', 'Tempo',
+                            'Instrumentalness', 'Acousticness']
+
+    for playlist in playlist_names:
+        # print(total_analytics[playlist])
+        total_danceability = []
+        total_energy = []
+        total_valence = []
+        total_tempo = []
+        total_instrumentalness = []
+        total_acousticness = []
+
+        for tracks in range(0,len(total_analytics[playlist])):
+            total_danceability.append(total_analytics[playlist][tracks]['danceability'])
+            total_energy.append(total_analytics[playlist][tracks]['energy'])
+            total_valence.append(total_analytics[playlist][tracks]['valence'])
+            total_tempo.append(total_analytics[playlist][tracks]['tempo'])
+            total_instrumentalness.append(total_analytics[playlist][tracks]['instrumentalness'])
+            total_acousticness.append(total_analytics[playlist][tracks]['acousticness'])
+
+        danceability = get_average(total_danceability)
+        energy = get_average(total_energy)
+        valence = get_average(total_energy)
+        tempo = get_average(total_energy)
+        instrumentalness = get_average(total_energy)
+        acousticness = get_average(total_energy)
+
+        chart_input = [danceability, energy, valence,tempo, instrumentalness, acousticness]
+        radar_chart.add(playlist, chart_input,stroke_style={'width': 5})
+
+    return radar_chart
+
+def get_average(attribute):
+
+    average_attribute = sum(attribute)/len(attribute)
+
+    return average_attribute
 
 def dump_data(json_data):
 
