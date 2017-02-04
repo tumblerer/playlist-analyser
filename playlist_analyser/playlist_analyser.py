@@ -17,7 +17,7 @@ PORT = 5000
 if len(sys.argv) > 1:
     REDIRECT_URI = "{}:{}/".format(CLIENT_SIDE_URL, PORT)
 else:
-    REDIRECT_URI = "http://146.198.217.109/"
+    REDIRECT_URI = "http://146.90.14.219/"
 SCOPE = ("playlist-read-collaborative playlist-read-private")
 
 # Control how many playlists can be analysed at a time
@@ -63,7 +63,6 @@ def login():
 def get_playlist_info():
 
     spotify = get_spotify()
-    valid_playlsts = 0
     all_playlists_data = {}
     all_playlists_tracks = {}
     all_playlists_dates = {}
@@ -76,86 +75,87 @@ def get_playlist_info():
         print(playlist_form)
         # If playlist form is empty, quit loop
         # TODO: validate text entry properly
-        if request.form[playlist_form] == '':
-            break
+        if request.form[playlist_form] != '':
+            valid_playlist = True
         else:
-            valid_playlsts = valid_playlsts + 1
+            valid_playlist = False
 
-        print("check")
-        playlist_uri = request.form[playlist_form]
+        if valid_playlist:
+            print("check")
+            playlist_uri = request.form[playlist_form]
 
-        if playlist_uri[0:4] == 'http':
-            # https://open.spotify.com/user/spotify/playlist/37i9dQZF1CyS7pa9xmes9h
-            split_uri = playlist_uri.split('/')
-        else:
-            # spotify:user:spotify:playlist:37i9dQZF1CyS7pa9xmes9h
-            split_uri = playlist_uri.split(":")
+            if playlist_uri[0:4] == 'http':
+                # https://open.spotify.com/user/spotify/playlist/37i9dQZF1CyS7pa9xmes9h
+                split_uri = playlist_uri.split('/')
+            else:
+                # spotify:user:spotify:playlist:37i9dQZF1CyS7pa9xmes9h
+                split_uri = playlist_uri.split(":")
 
-        username = split_uri[-3]
-        playlist_id = split_uri[-1]
+            username = split_uri[-3]
+            playlist_id = split_uri[-1]
 
-        user_id = username
+            user_id = username
 
-        # Check length of playlist
+            # Check length of playlist
 
-        playlist_fetch = spotify.user_playlist(user_id, playlist_id,
-                                               fields='tracks.total, name')
-        playlist_length = playlist_fetch['tracks']['total']
-        playlist_name = playlist_fetch['name']
+            playlist_fetch = spotify.user_playlist(user_id, playlist_id,
+                                                   fields='tracks.total, name')
+            playlist_length = playlist_fetch['tracks']['total']
+            playlist_name = playlist_fetch['name']
 
-        # dump_data(playlist)
+            # dump_data(playlist)
 
-        # Format (name, ID)
-        tracks = []
-        albums = []
-        artists = []
-        dates = []
-        genres = []
-        durations = []
-        explicits = []
-        countries = []
+            # Format (name, ID)
+            tracks = []
+            albums = []
+            artists = []
+            dates = []
+            genres = []
+            durations = []
+            explicits = []
+            countries = []
 
-        playlist_remaining = playlist_length
-        offset = 0
-        item_count = 0
+            playlist_remaining = playlist_length
+            offset = 0
+            item_count = 0
 
-        while playlist_remaining > 0:
-            playlist = spotify.user_playlist_tracks(user_id, playlist_id,offset=offset)
-            for items in playlist["items"]:
-                # print(items["track"]["name"])
-                track_info = [items["track"]["name"], items["track"]["id"]]
-                tracks.append(track_info)
-                album_info = [items["track"]["album"]["name"], items["track"]["album"]["id"]]
-                albums.append(album_info)
-                artist_info =  [items["track"]["artists"][0]["name"], items["track"]["artists"][0]["id"]]
-                artists.append(artist_info)
-                genres.append("genre_info")
-                duration_info = items["track"]["duration_ms"]
-                durations.append(duration_info)
-                explicit_info = items["track"]["explicit"]
-                explicits.append(explicit_info)
+            while playlist_remaining > 0:
+                playlist = spotify.user_playlist_tracks(user_id, playlist_id,offset=offset)
+                for items in playlist["items"]:
+                    # print(items["track"]["name"])
+                    track_info = [items["track"]["name"], items["track"]["id"]]
+                    tracks.append(track_info)
+                    album_info = [items["track"]["album"]["name"], items["track"]["album"]["id"]]
+                    albums.append(album_info)
+                    artist_info =  [items["track"]["artists"][0]["name"], items["track"]["artists"][0]["id"]]
+                    artists.append(artist_info)
+                    genres.append("genre_info")
+                    duration_info = items["track"]["duration_ms"]
+                    durations.append(duration_info)
+                    explicit_info = items["track"]["explicit"]
+                    explicits.append(explicit_info)
 
-            # Limit of 100 tracks in fetch
-            playlist_remaining = playlist_remaining - 100
-            offset = playlist_length - playlist_remaining
+                # Limit of 100 tracks in fetch
+                playlist_remaining = playlist_remaining - 100
+                offset = playlist_length - playlist_remaining
 
-        dates = get_dates_from_album(albums, playlist_length)
-        analytics = get_analytics_info(tracks)
+            dates = get_dates_from_album(albums, playlist_length)
+            analytics = get_analytics_info(tracks)
 
-        all_playlists_tracks[playlist_name] = tracks
-        all_playlists_dates[playlist_name] = dates
-        all_playlists_durations[playlist_name] = durations
-        all_playlists_explicits[playlist_name] = explicits
-        all_playlists_analytics[playlist_name] = analytics
+            all_playlists_tracks[playlist_name] = tracks
+            all_playlists_dates[playlist_name] = dates
+            all_playlists_durations[playlist_name] = durations
+            all_playlists_explicits[playlist_name] = explicits
+            all_playlists_analytics[playlist_name] = analytics
 
-        playlist_data = [playlist_id]
+            playlist_data = [playlist_id]
 
-        for track, album, artist, date, genre, duration, explicit \
-            in zip(tracks, albums, artists, dates, genres, durations, explicits):
-            meta_object = track_metadata(track, album, artist, date, genre, duration, explicit)
-            playlist_data.append(meta_object)
+            for track, album, artist, date, genre, duration, explicit \
+                in zip(tracks, albums, artists, dates, genres, durations, explicits):
+                meta_object = track_metadata(track, album, artist, date, genre, duration, explicit)
+                playlist_data.append(meta_object)
 
-        all_playlists_data[playlist_id] = playlist_data
+            all_playlists_data[playlist_id] = playlist_data
 
     # print(all_playlists_dates)
     dates_chart = generate_dates_chart(all_playlists_dates)
