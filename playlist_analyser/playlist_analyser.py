@@ -173,12 +173,12 @@ def get_dates_from_album(album_info, total):
     spotify = get_spotify()
 
     dates = []
-    ids = []
 
     offset = 0
     albums_remaining = total
 
     while albums_remaining > 0:
+        ids = []
         # Build list of 20 ids
         # Limit of 20 songs in query
         if albums_remaining < 20:
@@ -188,14 +188,14 @@ def get_dates_from_album(album_info, total):
 
         while albums_remaining_20 > 0:
             ids.append(album_info[offset][1])
-            offset = offset + 1
-            albums_remaining_20 = albums_remaining_20 - 1
+            offset += 1
+            albums_remaining_20 -= 1
 
-        # dates = spotify.albums(ids)["release_date"][:4]
+        ids = filter(None, ids)
         albums = spotify.albums(ids)["albums"]
         albums_remaining = albums_remaining - 20
+
         # ID array needs to be reset every loop
-        ids = []
         for entry in albums:
             date = entry["release_date"][:4]
             dates.append(int(date))
@@ -224,6 +224,7 @@ def get_analytics_info(tracks):
             tracks_remaining_100 -= 1
 
         tracks_remaining -= 100
+        track_id = filter(None, track_id)
         analytics_20 = spotify.audio_features(track_id)
 
         analytics += analytics_20
@@ -351,9 +352,11 @@ def generate_analytics_radar_chart(total_analytics):
 
 def get_average(attribute):
 
+    attribute = list(filter(None, attribute))
     average_attribute = sum(attribute)/len(attribute)
 
     return average_attribute
+
 
 def dump_data(json_data):
 
