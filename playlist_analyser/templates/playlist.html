@@ -7,12 +7,14 @@
 <body>
     <h1>Playlist Analyser for Spotify</h1>
     <h2>Processed Data</h2>
-      {{ dates_chart.render()|safe }}
+    {% for chart in charts %}
+      {{chart.render()|safe }}
       <br><br><br>
-      {{ duration_chart.render()|safe }}
-      <br><br><br>
-      {{ analytics_radar_chart.render()|safe }}
-      <br><br>
+    {% endfor %}
+    <form method="POST" action="/download">
+        <input type="hidden" name="graph_data" value="ttestest">
+        <input type="submit" value="Download Image">
+    </form>
     <h2>Raw Data</h2>
     <h3>Tracks</h3>
     {# {% for key in data %}

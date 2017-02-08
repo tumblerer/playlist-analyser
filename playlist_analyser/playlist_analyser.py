@@ -8,6 +8,10 @@ from collections import Counter, OrderedDict
 from datetime import datetime
 import sys
 import time
+import sys
+from PIL import Image
+from tempfile import TemporaryFile
+
 
 app = Flask(__name__)
 
@@ -56,8 +60,36 @@ def login():
     return redirect(sp_oauth.get_authorize_url())
 
 
-# TODO: Gauge for average time
-#       Radar for analytics
+@app.route("/download", methods=['POST'])
+def download():
+
+    graphs = request.data
+    print(graphs)
+    images = []
+    for graph in graphs:
+        temp_file = TemporaryFile(mode='w+b',suffix='png')
+        graph.render_to_png(temp_file)
+        image = Image.open(temp_file)
+        images.append(image)
+
+    widths, heights = zip(*(i.size for i in images))
+
+    total_width = max(widths)
+    max_height = sum(heights)
+
+    new_im = Image.new('RGB', (total_width, max_height))
+
+    y_offset = 0
+    for im in images:
+        new_im.paste(im, (0,y_offset))
+        y_offset += im.height
+
+    temp_file = TemporaryFile(mode='w+b',suffix='png')
+    copyfileobj(new_im,temp_file)
+
+    return send_file(temp_file, mimetype='image/png')
+
+
 
 @app.route("/playlists", methods=['POST'])
 def get_playlist_info():
@@ -158,15 +190,18 @@ def get_playlist_info():
             all_playlists_data[playlist_id] = playlist_data
 
     # print(all_playlists_dates)
+    charts = []
     dates_chart = generate_dates_chart(all_playlists_dates)
     duration_chart = generate_duration_chart(all_playlists_durations)
     analytics_radar_chart = generate_analytics_radar_chart(all_playlists_analytics)
 
+    charts.append(dates_chart)
+    charts.append(duration_chart)
+    charts.append(analytics_radar_chart)
 
-    return render_template('playlist.html', data=all_playlists_data,
-                            dates_chart=dates_chart,
-                            duration_chart=duration_chart,
-                            analytics_radar_chart=analytics_radar_chart)
+    return render_template('playlist.html', redirect=REDIRECT_URI,
+                            data=all_playlists_data,
+                            charts=charts)
 
 def get_dates_from_album(album_info, total):
 
